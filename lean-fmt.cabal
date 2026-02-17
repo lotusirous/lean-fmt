@@ -11,7 +11,7 @@ library
   build-depends:
       base >=4.16 && <5
     , text >=2.0 && <2.2
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable lean-fmt
   hs-source-dirs: app
@@ -20,7 +20,7 @@ executable lean-fmt
       base
     , text
     , lean-fmt
-  default-language: GHC2024
+  default-language: GHC2021
 
 test-suite lean-fmt-test
   type: exitcode-stdio-1.0
@@ -34,5 +34,5 @@ test-suite lean-fmt-test
     , tasty-hunit >=0.10 && <0.11
     , tasty-quickcheck >=0.10 && <0.12
     , QuickCheck >=2.14 && <2.16
-  default-language: GHC2024
+  default-language: GHC2021
 
