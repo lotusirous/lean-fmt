@@ -1,0 +1,38 @@
+cabal-version: 3.0
+name: lean-fmt
+version: 0.1.0.0
+synopsis: Tiny Lean colon-space formatter
+build-type: Simple
+tested-with: GHC ==9.14.1
+
+library
+  hs-source-dirs: src
+  exposed-modules: LeanFmt
+  build-depends:
+      base >=4.16 && <5
+    , text >=2.0 && <2.2
+  default-language: GHC2024
+
+executable lean-fmt
+  hs-source-dirs: app
+  main-is: Main.hs
+  build-depends:
+      base
+    , text
+    , lean-fmt
+  default-language: GHC2024
+
+test-suite lean-fmt-test
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  build-depends:
+      base
+    , text
+    , lean-fmt
+    , tasty >=1.4 && <1.6
+    , tasty-hunit >=0.10 && <0.11
+    , tasty-quickcheck >=0.10 && <0.12
+    , QuickCheck >=2.14 && <2.16
+  default-language: GHC2024
+
