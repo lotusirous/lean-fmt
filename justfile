@@ -14,12 +14,15 @@ test:
 print-bin:
   cabal list-bin exe:lean-fmt
 
+compile-all: compile
+
 # Build and copy a deployable binary to ./bin/lean-fmt
 compile:
   mkdir -p bin
   cabal build exe:lean-fmt
   BIN="$(cabal list-bin exe:lean-fmt)"; install -m 755 "$BIN" "bin/lean-fmt"
   echo "Wrote bin/lean-fmt"
+
 
 # Convenience: run the formatter (stdin by default)
 run *args:
