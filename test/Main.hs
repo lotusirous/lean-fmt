@@ -33,8 +33,7 @@ unitTests =
     , testCase "multiple binders: normalize both parameter types" $
         formatLean
           "def maximum (n: Nat) (k : Nat) : Nat :=\n  if n < k then k\n  else n\n"
-          @?=
-            "def maximum (n : Nat) (k : Nat) : Nat :=\n  if n < k then k\n  else n\n"
+          @?= "def maximum (n : Nat) (k : Nat) : Nat :=\n  if n < k then k\n  else n\n"
     , testCase "idempotent on already formatted" $
         formatLean "| false : Boolean\n" @?= "| false : Boolean\n"
     , testCase "do not touch line comments" $
@@ -78,6 +77,9 @@ unitTests =
     , testCase "colon inside nested block comment unchanged" $
         formatLean "/- outer /- inner :Nat -/ -/\n"
           @?= "/- outer /- inner :Nat -/ -/\n"
+    , testCase "double space in abbrev" $
+        formatLean "abbrev N  : Type := Nat"
+          @?= "abbrev N : Type := Nat"
     ]
 
 propertyTests =

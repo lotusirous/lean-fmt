@@ -139,11 +139,11 @@ stepCode rs prev t acc =
     Just (c, rest) ->
       case c of
         ' ' ->
-          let (spaces, restSpaces) = T.span (== ' ') rest
-           in case T.uncons restSpaces of
+          let (runOfSpaces, restAfter) = T.span (== ' ') t
+           in case T.uncons restAfter of
                 -- Collapse any run of spaces immediately before a type colon.
                 Just (':', afterColon) ->
-                  case T.uncons afterColon of
+                  case T.uncons (snd (T.span (== ' ') afterColon)) of
                     Just (c2, rest2) | isIdentStart c2 ->
                       let before =
                             case prev of
@@ -156,13 +156,9 @@ stepCode rs prev t acc =
                               <> B.singleton c2
                        in go rs Code (Just c2) rest2 (acc <> out)
                     _ ->
-                      let spaceCount = 1 + T.length spaces
-                          outSpaces = B.fromText (T.replicate spaceCount " ")
-                       in go rs Code (Just ' ') restSpaces (acc <> outSpaces)
+                      go rs Code (Just ' ') restAfter (acc <> B.fromText runOfSpaces)
                 _ ->
-                  let spaceCount = 1 + T.length spaces
-                      outSpaces = B.fromText (T.replicate spaceCount " ")
-                   in go rs Code (Just ' ') restSpaces (acc <> outSpaces)
+                  go rs Code (Just ' ') restAfter (acc <> B.fromText runOfSpaces)
         '-' ->
           case T.uncons rest of
             Just ('-', rest2) -> go rs LineComment (Just '-') rest2 (acc <> B.fromText "--")
