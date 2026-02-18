@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import Data.Char (isSpace)
 import Data.Text qualified as T
 import LeanFmt (formatLean)
 import Test.QuickCheck (Property, (==>))
@@ -80,13 +81,60 @@ unitTests =
     , testCase "double space in abbrev" $
         formatLean "abbrev N  : Type := Nat"
           @?= "abbrev N : Type := Nat"
+    , testCase "trim trailing space" $
+        formatLean "def x : Nat := 1  \n"
+          @?= "def x : Nat := 1\n"
+    , testCase "indent normalized to 2 spaces" $
+        formatLean "def x : Nat :=\n if True then\n   1\n"
+          @?= "def x : Nat :=\n  if True then\n    1\n"
+    -- Edge cases: empty / minimal input
+    , testCase "empty input unchanged" $
+        formatLean "" @?= ""
+    , testCase "only newline unchanged" $
+        formatLean "\n" @?= "\n"
+    , testCase "only spaces (no newline) trimmed to empty" $
+        formatLean "   " @?= ""
+    , testCase "blank line with spaces becomes empty line" $
+        formatLean "a\n  \nb" @?= "a\n\nb"
+    -- Edge cases: colon rule
+    , testCase "colon at end of input unchanged" $
+        formatLean "def x :" @?= "def x :"
+    , testCase "colon followed by digit unchanged" $
+        formatLean "x:0" @?= "x:0"
+    , testCase "type at start of input" $
+        formatLean ":Type" @?= ": Type"
+    , testCase "do not add space for :=" $
+        formatLean "def x:=1" @?= "def x:=1"
+    -- Edge cases: layout (trim + indent)
+    , testCase "tab indent becomes 2 spaces" $
+        formatLean "\tdef x := 1" @?= "  def x := 1"
+    , testCase "one space indent rounds to 2" $
+        formatLean " x" @?= "  x"
+    , testCase "trailing tab trimmed" $
+        formatLean "x\t\n" @?= "x\n"
+    , testCase "multiple blank lines preserved" $
+        formatLean "a\n\n\nb" @?= "a\n\n\nb"
+    , testCase "mixed tab and space indent normalized" $
+        formatLean "\t  y" @?= "    y"
+    -- Edge cases: unterminated constructs (return input unchanged)
+    , testCase "unterminated raw string unchanged" $
+        formatLean "def s := r#\"x" @?= "def s := r#\"x"
+    , testCase "unterminated quoted identifier unchanged" $
+        formatLean "def «x" @?= "def «x"
+    -- Edge cases: colon after newline / at line start
+    , testCase "colon at line start gets space after (indent normalized to 2)" $
+        formatLean "\n:Type" @?= "\n  : Type"
+    , testCase "string with newline unchanged" $
+        formatLean "def s := \"line1\nline2\"" @?= "def s := \"line1\nline2\""
+    , testCase "empty block comment unchanged" $
+        formatLean "/-**/-" @?= "/-**/-"
     ]
 
 propertyTests =
   testGroup
     "properties"
     [ testProperty "idempotent" prop_idempotent
-    , testProperty "never shortens output" prop_neverShortens
+    , testProperty "preserves non-whitespace" prop_preservesNonWhitespace
     , testProperty "unterminated string without quotes stays unchanged" prop_unterminatedStringNoQuote
     ]
 
@@ -95,10 +143,12 @@ prop_idempotent s =
   let t = T.pack s
    in formatLean (formatLean t) == formatLean t
 
-prop_neverShortens :: String -> Bool
-prop_neverShortens s =
+prop_preservesNonWhitespace :: String -> Bool
+prop_preservesNonWhitespace s =
   let t = T.pack s
-   in T.length (formatLean t) >= T.length t
+      out = formatLean t
+      nonWs = T.filter (\c -> not (isSpace c))
+   in nonWs out == nonWs t
 
 prop_unterminatedStringNoQuote :: String -> Property
 prop_unterminatedStringNoQuote s =

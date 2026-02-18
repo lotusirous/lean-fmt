@@ -70,7 +70,28 @@ formatWith rs input = fromMaybe input (formatWithSafe rs input)
 formatWithSafe :: [Rule] -> Text -> Maybe Text
 formatWithSafe rs input = do
   b <- go rs Code Nothing input mempty
-  pure (LT.toStrict (B.toLazyText b))
+  pure (normalizeLayout (LT.toStrict (B.toLazyText b)))
+
+-- Trim trailing space and normalize indentation to 2 spaces per level.
+normalizeLayout :: Text -> Text
+normalizeLayout =
+  T.intercalate "\n"
+    . map normalizeLine
+    . T.splitOn "\n"
+
+normalizeLine :: Text -> Text
+normalizeLine line =
+  let trimmed = T.dropWhileEnd (\c -> c == ' ' || c == '\t') line
+      (indent, rest) = T.span (\c -> c == ' ' || c == '\t') trimmed
+   in if T.null rest
+        then ""
+        else T.replicate (indentCols indent) " " <> rest
+
+-- Indent width (tab = 2), then round to multiple of 2.
+indentCols :: Text -> Int
+indentCols t =
+  let w = T.foldl' (\n c -> if c == '\t' then n + 2 else n + 1) 0 t
+   in if w <= 0 then 0 else ((w + 1) `div` 2) * 2
 
 go :: [Rule] -> State -> Maybe Char -> Text -> B.Builder -> Maybe B.Builder
 go rs st prev t acc =
