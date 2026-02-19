@@ -356,7 +356,22 @@ def main : IO Unit := do
 `,
 	},
 	{
-		name: "indent after match with",
+		name: "no indent after match with in a line",
+		archive: `
+-- input.lean --
+def pred (n : Nat) : Nat :=
+  match n with
+  | Nat.zero => Nat.zero
+  | Nat.succ k => k
+-- output.lean --
+def pred (n : Nat) : Nat :=
+  match n with
+  | Nat.zero => Nat.zero
+  | Nat.succ k => k
+`,
+	},
+	{
+		name: "match arms indent when match on same line as :=",
 		archive: `
 -- input.lean --
 def foo := match x with

@@ -399,7 +399,15 @@ func (f *Formatter) FormatLine(tokens []Token) {
 	last := lastNonWSToken(tokens)
 	if last.Kind == tokKeyword {
 		if _, ok := indentKeywords[last.Text]; ok {
-			f.pendingIndent = f.opts.IndentSize
+			// Special case: "match ... with" on same line where match is FIRST keyword
+			// (like "  match n with") should not indent further - arms stay at match level.
+			// But "def foo := match x with" should indent because match isn't first.
+			first := firstNonWSToken(tokens)
+			if last.Text == "with" && first.Kind == tokKeyword && first.Text == "match" {
+				// match is first keyword on line, don't add pending indent
+			} else {
+				f.pendingIndent = f.opts.IndentSize
+			}
 		}
 	}
 	if last.Kind == tokOpen {
@@ -556,6 +564,15 @@ func firstNonWSToken(tokens []Token) Token {
 		}
 	}
 	return Token{}
+}
+
+func lineContainsKeyword(tokens []Token, keyword string) bool {
+	for _, t := range tokens {
+		if t.Kind == tokKeyword && t.Text == keyword {
+			return true
+		}
+	}
+	return false
 }
 
 // StreamFormatter formats a stream of lines from a reader to a writer.
