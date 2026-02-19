@@ -369,6 +369,23 @@ deriving Inhabited, Repr, DecidableEq
 `,
 	},
 	{
+		name: "dont auto indent after do keyword",
+		archive: `
+-- input.lean --
+def foo(n : Nat) := do
+  let a = 1
+  let b = 2
+
+  let c = 3
+-- output.lean --
+def foo(n : Nat) := do
+  let a = 1
+  let b = 2
+
+  let c = 3
+`,
+	},
+	{
 		name: "keyword do should not enter in the newline",
 		archive: `
 -- input.lean --

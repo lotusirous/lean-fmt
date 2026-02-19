@@ -326,12 +326,13 @@ type FormatOptions struct {
 }
 
 type Formatter struct {
-	opts          FormatOptions
-	indent        int
-	pendingIndent int
-	blankCount    int
-	out           strings.Builder
-	lineCount     int
+	opts             FormatOptions
+	indent           int
+	pendingIndent    int
+	blankCount       int
+	prevLineWasBlank bool
+	out              strings.Builder
+	lineCount        int
 }
 
 func NewFormatter(opts FormatOptions) *Formatter {
@@ -350,8 +351,7 @@ func (f *Formatter) FormatLine(tokens []Token) {
 			}
 			f.lineCount++
 		}
-		f.indent = 0
-		f.pendingIndent = 0
+		f.prevLineWasBlank = true
 		return
 	}
 	f.blankCount = 0
@@ -373,6 +373,12 @@ func (f *Formatter) FormatLine(tokens []Token) {
 	f.pendingIndent = 0
 
 	first := firstNonWSToken(tokens)
+	// After a blank line, a comment-only line starts a new logical section at column 0.
+	if f.prevLineWasBlank && isCommentOnlyTokens(tokens) {
+		f.indent = 0
+	}
+	f.prevLineWasBlank = false
+
 	if first.Kind == tokKeyword {
 		// Top-level-ish declarations reset indentation (def, theorem, inductive, where, ...).
 		if _, ok := toplevelKeywords[first.Text]; ok {
@@ -550,6 +556,18 @@ func isRangeContext(t Token) bool {
 func isBlankTokens(tokens []Token) bool {
 	for _, t := range tokens {
 		if t.Kind != tokWhitespace {
+			return false
+		}
+	}
+	return true
+}
+
+func isCommentOnlyTokens(tokens []Token) bool {
+	for _, t := range tokens {
+		switch t.Kind {
+		case tokWhitespace, tokLineComment, tokBlockComment:
+			// ok
+		default:
 			return false
 		}
 	}
