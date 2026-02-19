@@ -1,59 +1,46 @@
-## Lean Format
+# lean-fmt
 
-`lean-fmt` is a small command-line formatter for Lean 4 source files.
+A fast, lightweight code formatter for [Lean 4](https://lean-lang.org/) source files.
 
-- Fast & simple: works on plain text instead of the full Lean AST.
-- Safe: only inserts or normalizes whitespace; it never reorders or deletes code.
-- Composable: formatting behavior is driven by a small set of rewrite rules.
+- **Fast**: Single static binary, streaming I/O
+- **Safe**: Only normalizes whitespace; never reorders or deletes code
+- **Simple**: Plain text processing, no AST parsing
 
-### Build from sources
+## Simple Formatting Rules
 
+- 2-space indentation, auto-indent after `by`, `do`, `match`, `where`, `with`, `:=`, `=>`
+- Spaces around operators (`:`, `:=`, `=>`, `|`)
+- Collapses multiple blank lines (max 2), strips trailing whitespace
+- Breaks lines >100 chars at operators
 
-Ensure that you're using latest Haskell version of GCH 9.14. From the project root:
+## Installation
 
-```bash
-just compile   # builds and copies binary to bin/lean-fmt
-```
-
-You can also use the cabal commands directly:
-
-```bash
-cabal build exe:lean-fmt
-cabal list-bin exe:lean-fmt   # show compiled binary path
-```
-
-If you use GitHub Releases, prebuilt binaries for Linux and macOS are attached to each `vX.Y.Z` tag.
-
-### Usage
-
-Format files passed as arguments:
+Download from [GitHub Releases](https://github.com/lotusirous/lean-fmt/releases), or build from source:
 
 ```bash
-bin/lean-fmt path/to/file.lean
+go install github.com/lotusirous/lean-fmt@latest
 ```
 
-Or read from stdin and write to stdout:
+## Usage
 
 ```bash
-cat file.lean | bin/lean-fmt
+lean-fmt file.lean          # format file to stdout
+cat file.lean | lean-fmt    # read from stdin
 ```
 
-### Neovim (`conform.nvim`)
+## Editor Integration
 
-Add `lean-fmt` as a formatter for Lean files in your Neovim config:
+### Neovim (conform.nvim)
 
 ```lua
 require("conform").setup({
-  formatters_by_ft = {
-    lean = { "lean_fmt" },
-  },
-  format_on_save = {
-    lsp_fallback = true,
+  formatters_by_ft = { lean = { "lean_fmt" } },
+  formatters = {
+    lean_fmt = { command = "lean-fmt", stdin = true },
   },
 })
-
-require("conform").formatters.lean_fmt = {
-  command = "lean-fmt",   -- or absolute path if not on $PATH
-  stdin = true,
-}
 ```
+
+## License
+
+MIT
