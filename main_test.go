@@ -737,6 +737,39 @@ def foo := List.map
 `,
 	},
 	{
+		name: "nested match with keyword",
+		archive: `
+-- input.lean --
+theorem foo (x : Option (Sum Nat Bool)) : Nat :=
+  match x with
+  | some y =>
+    match y with
+    | Sum.inl n =>
+      match n with
+      | 0 => 0
+      | _ => 1
+    | Sum.inr b =>
+      match b with
+      | true => 2
+      | false => 3
+  | none => 42
+-- output.lean --
+theorem foo (x : Option (Sum Nat Bool)) : Nat :=
+  match x with
+  | some y =>
+    match y with
+    | Sum.inl n =>
+      match n with
+      | 0 => 0
+      | _ => 1
+    | Sum.inr b =>
+      match b with
+      | true => 2
+      | false => 3
+  | none => 42
+`,
+	},
+	{
 		name: "unicode identifiers",
 		archive: `
 -- input.lean --

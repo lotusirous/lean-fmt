@@ -45,6 +45,8 @@ var keywords = map[string]struct{}{
 	"by":        {},
 	"do":        {},
 	"match":     {},
+	"cases":     {},
+	"case":      {},
 	"where":     {},
 	"let":       {},
 	"have":      {},
@@ -55,6 +57,7 @@ var indentKeywords = map[string]struct{}{
 	"by":    {},
 	"do":    {},
 	"match": {},
+	"cases": {},
 	"where": {},
 	"with":  {},
 }
@@ -329,6 +332,7 @@ type Formatter struct {
 	opts             FormatOptions
 	indent           int
 	pendingIndent    int
+	matchArmStack    []int // stack of arm/case indents for nested match/cases and case =>
 	blankCount       int
 	prevLineWasBlank bool
 	out              strings.Builder
@@ -358,7 +362,9 @@ func (f *Formatter) FormatLine(tokens []Token) {
 
 	tokens = f.normalizeTokens(tokens)
 
+	inputIndent := -1
 	if len(tokens) > 0 && tokens[0].Kind == tokWhitespace {
+		inputIndent = len(tokens[0].Text)
 		tokens = tokens[1:]
 	}
 	if len(tokens) == 0 {
@@ -373,6 +379,7 @@ func (f *Formatter) FormatLine(tokens []Token) {
 	f.pendingIndent = 0
 
 	first := firstNonWSToken(tokens)
+	last := lastCodeToken(tokens)
 	// After a blank line, a comment-only line starts a new logical section at column 0.
 	if f.prevLineWasBlank && isCommentOnlyTokens(tokens) {
 		f.indent = 0
@@ -385,6 +392,10 @@ func (f *Formatter) FormatLine(tokens []Token) {
 			f.indent = 0
 		}
 	}
+	// Line starting with ":=" (e.g. ":= by") starts definition body at column 0.
+	if first.Kind == tokOperator && first.Text == ":=" {
+		f.indent = 0
+	}
 
 	if tokens[0].Kind == tokClose {
 		f.indent -= f.opts.IndentSize
@@ -392,9 +403,22 @@ func (f *Formatter) FormatLine(tokens []Token) {
 			f.indent = 0
 		}
 	}
-	// Match arm "| ... =>" should align with previous arm; dedent one level if we're deeper.
-	if first.Kind == tokOperator && first.Text == "|" && f.indent > f.opts.IndentSize {
-		f.indent -= f.opts.IndentSize
+	// Nested match/cases: use stack so each "|" or "case" aligns to its block.
+	if (first.Kind == tokOperator && first.Text == "|") || (first.Kind == tokKeyword && first.Text == "case") {
+		for len(f.matchArmStack) > 0 && inputIndent >= 0 && f.matchArmStack[len(f.matchArmStack)-1] > inputIndent {
+			f.matchArmStack = f.matchArmStack[:len(f.matchArmStack)-1]
+		}
+		if len(f.matchArmStack) > 0 {
+			f.indent = f.matchArmStack[len(f.matchArmStack)-1]
+		} else if first.Kind == tokOperator && first.Text == "|" && f.indent > 2*f.opts.IndentSize {
+			// No stack: legacy dedent one level for match arms when deeper than two levels
+			f.indent -= f.opts.IndentSize
+		}
+	} else {
+		// Non-arm, non-case line: pop levels we've left
+		for len(f.matchArmStack) > 0 && f.matchArmStack[len(f.matchArmStack)-1] > f.indent {
+			f.matchArmStack = f.matchArmStack[:len(f.matchArmStack)-1]
+		}
 	}
 
 	if f.lineCount > 0 {
@@ -402,23 +426,30 @@ func (f *Formatter) FormatLine(tokens []Token) {
 	}
 	f.lineCount++
 
-	if f.indent > 0 {
-		f.out.WriteString(strings.Repeat(" ", f.indent))
+	outIndent := f.indent
+	if outIndent > 0 {
+		f.out.WriteString(strings.Repeat(" ", outIndent))
 	}
 
 	for _, t := range tokens {
 		f.out.WriteString(t.Text)
 	}
 
-	last := lastCodeToken(tokens)
+	// Push indent when this line starts a match/cases block or a case arm for sibling alignment.
+	if last.Kind == tokKeyword && last.Text == "with" && first.Kind == tokKeyword && (first.Text == "match" || first.Text == "cases") {
+		f.matchArmStack = append(f.matchArmStack, outIndent)
+	}
+	if first.Kind == tokKeyword && first.Text == "case" && last.Kind == tokOperator && last.Text == "=>" {
+		f.matchArmStack = append(f.matchArmStack, outIndent)
+	}
+
 	if last.Kind == tokKeyword {
 		if _, ok := indentKeywords[last.Text]; ok {
 			// Special case: "match ... with" on same line where match is FIRST keyword
 			// (like "  match n with") should not indent further - arms stay at match level.
 			// But "def foo := match x with" should indent because match isn't first.
-			first := firstNonWSToken(tokens)
-			if last.Text == "with" && first.Kind == tokKeyword && first.Text == "match" {
-				// match is first keyword on line, don't add pending indent
+			if last.Text == "with" && first.Kind == tokKeyword && (first.Text == "match" || first.Text == "cases") {
+				// match/cases is first keyword on line, don't add pending indent
 			} else {
 				f.pendingIndent = f.opts.IndentSize
 			}
@@ -428,6 +459,10 @@ func (f *Formatter) FormatLine(tokens []Token) {
 		f.pendingIndent = f.opts.IndentSize
 	}
 	if last.Kind == tokOperator && (last.Text == ":=" || last.Text == "=>") {
+		f.pendingIndent = f.opts.IndentSize
+	}
+	// Type continuation after ":" (e.g. "theorem foo :" then "  xs < ys → ...").
+	if last.Kind == tokOperator && last.Text == ":" {
 		f.pendingIndent = f.opts.IndentSize
 	}
 }
