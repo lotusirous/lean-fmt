@@ -71,6 +71,7 @@ var toplevelKeywords = map[string]struct{}{
 	"axiom":     {},
 	"constant":  {},
 	"opaque":    {},
+	"where":     {}, // treat a standalone `where` as starting a top-level-style block
 }
 
 type stateFn func(*Scanner) stateFn
@@ -371,6 +372,7 @@ func (f *Formatter) FormatLine(tokens []Token) {
 
 	first := firstNonWSToken(tokens)
 	if first.Kind == tokKeyword {
+		// Top-level-ish declarations reset indentation (def, theorem, inductive, where, ...).
 		if _, ok := toplevelKeywords[first.Text]; ok {
 			f.indent = 0
 		}
@@ -396,7 +398,7 @@ func (f *Formatter) FormatLine(tokens []Token) {
 		f.out.WriteString(t.Text)
 	}
 
-	last := lastNonWSToken(tokens)
+	last := lastCodeToken(tokens)
 	if last.Kind == tokKeyword {
 		if _, ok := indentKeywords[last.Text]; ok {
 			// Special case: "match ... with" on same line where match is FIRST keyword
@@ -548,10 +550,13 @@ func isBlankTokens(tokens []Token) bool {
 	return true
 }
 
-func lastNonWSToken(tokens []Token) Token {
+// lastCodeToken returns the last token that is not whitespace and not a comment.
+// Used for indent triggers so that "where -- comment" still triggers indent.
+func lastCodeToken(tokens []Token) Token {
 	for i := len(tokens) - 1; i >= 0; i-- {
-		if tokens[i].Kind != tokWhitespace {
-			return tokens[i]
+		t := tokens[i]
+		if t.Kind != tokWhitespace && t.Kind != tokLineComment && t.Kind != tokBlockComment {
+			return t
 		}
 	}
 	return Token{}
@@ -564,15 +569,6 @@ func firstNonWSToken(tokens []Token) Token {
 		}
 	}
 	return Token{}
-}
-
-func lineContainsKeyword(tokens []Token, keyword string) bool {
-	for _, t := range tokens {
-		if t.Kind == tokKeyword && t.Text == keyword {
-			return true
-		}
-	}
-	return false
 }
 
 // StreamFormatter formats a stream of lines from a reader to a writer.

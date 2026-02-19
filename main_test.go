@@ -356,6 +356,108 @@ def main : IO Unit := do
 `,
 	},
 	{
+		name: "indent for inductive and where with trailing comment",
+		archive: `
+-- input.lean --
+inductive Boolean where -- comment
+| false : Boolean
+| true : Boolean
+-- output.lean --
+inductive Boolean where -- comment
+  | false : Boolean
+  | true : Boolean
+`,
+	},
+	{
+		name: "indent after where with trailing comment",
+		archive: `
+-- input.lean --
+def foo : Nat :=
+  bar
+where -- comment
+  baz : Nat := 1
+-- output.lean --
+def foo : Nat :=
+  bar
+where -- comment
+  baz : Nat := 1
+`,
+	},
+	{
+		name: "indent after by with trailing comment",
+		archive: `
+-- input.lean --
+theorem foo : True := by -- proof
+  exact trivial
+-- output.lean --
+theorem foo : True := by -- proof
+  exact trivial
+`,
+	},
+	{
+		name: "indent after do with trailing comment",
+		archive: `
+-- input.lean --
+def main : IO Unit := do -- IO
+  let x <- pure 1
+  pure x
+-- output.lean --
+def main : IO Unit := do -- IO
+  let x <- pure 1
+  pure x
+`,
+	},
+	{
+		name: "indent after := with trailing comment",
+		archive: `
+-- input.lean --
+def foo := -- comment
+  bar
+-- output.lean --
+def foo := -- comment
+  bar
+`,
+	},
+	{
+		name: "indent after => with trailing comment",
+		archive: `
+-- input.lean --
+def f := fun x => -- arrow
+  x
+-- output.lean --
+def f := fun x => -- arrow
+  x
+`,
+	},
+	{
+		name: "no indent after match with in a line with trailing comment",
+		archive: `
+-- input.lean --
+def pred (n : Nat) : Nat :=
+  match n with -- comment
+  | Nat.zero => Nat.zero
+  | Nat.succ k => k
+-- output.lean --
+def pred (n : Nat) : Nat :=
+  match n with -- comment
+  | Nat.zero => Nat.zero
+  | Nat.succ k => k
+`,
+	},
+	{
+		name: "match arms indent when match on same line as := with trailing comment",
+		archive: `
+-- input.lean --
+def foo := match x with -- comment
+| 0 => "zero"
+| _ => "other"
+-- output.lean --
+def foo := match x with -- comment
+  | 0 => "zero"
+  | _ => "other"
+`,
+	},
+	{
 		name: "no indent after match with in a line",
 		archive: `
 -- input.lean --
