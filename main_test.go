@@ -360,22 +360,37 @@ def main : IO Unit := do
 		archive: `
 -- input.lean --
 inductive WireType where
-  | VARINT : WireType
-  | I64 : WireType
-  | LEN : WireType
-  | SGROUP : WireType
-  | EGROUP : WireType
   | I32 : WireType
 deriving Inhabited, Repr, DecidableEq
 -- output.lean --
 inductive WireType where
-  | VARINT : WireType
-  | I64 : WireType
-  | LEN : WireType
-  | SGROUP : WireType
-  | EGROUP : WireType
   | I32 : WireType
 deriving Inhabited, Repr, DecidableEq
+`,
+	},
+	{
+		name: "keyword do should not enter in the newline",
+		archive: `
+-- input.lean --
+def main (args : List String) : IO UInt32 := do
+  match configFromArgs args with
+  | some config =>
+    dirTree config (← IO.currentDir)
+    pure 0
+  | none =>
+    IO.eprintln s!"Didn't understand argument(s) {" ".separate args}\n"
+    IO.eprintln usage
+    pure 1
+-- output.lean --
+def main (args : List String) : IO UInt32 := do
+  match configFromArgs args with
+  | some config =>
+    dirTree config (← IO.currentDir)
+    pure 0
+  | none =>
+    IO.eprintln s!"Didn't understand argument(s) {" ".separate args}\n"
+    IO.eprintln usage
+    pure 1
 `,
 	},
 	{

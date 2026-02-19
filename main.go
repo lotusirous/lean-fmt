@@ -386,6 +386,10 @@ func (f *Formatter) FormatLine(tokens []Token) {
 			f.indent = 0
 		}
 	}
+	// Match arm "| ... =>" should align with previous arm; dedent one level if we're deeper.
+	if first.Kind == tokOperator && first.Text == "|" && f.indent > f.opts.IndentSize {
+		f.indent -= f.opts.IndentSize
+	}
 
 	if f.lineCount > 0 {
 		f.out.WriteByte('\n')
