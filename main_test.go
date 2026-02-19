@@ -356,6 +356,29 @@ def main : IO Unit := do
 `,
 	},
 	{
+		name: "indent for inductive with deriving",
+		archive: `
+-- input.lean --
+inductive WireType where
+  | VARINT : WireType
+  | I64 : WireType
+  | LEN : WireType
+  | SGROUP : WireType
+  | EGROUP : WireType
+  | I32 : WireType
+deriving Inhabited, Repr, DecidableEq
+-- output.lean --
+inductive WireType where
+  | VARINT : WireType
+  | I64 : WireType
+  | LEN : WireType
+  | SGROUP : WireType
+  | EGROUP : WireType
+  | I32 : WireType
+deriving Inhabited, Repr, DecidableEq
+`,
+	},
+	{
 		name: "indent for inductive and where with trailing comment",
 		archive: `
 -- input.lean --
