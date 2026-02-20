@@ -33,6 +33,25 @@ def add1(n : Nat) : Nat := n + 1
 `,
 	},
 	{
+		name: "match should have correct indent",
+		archive: `
+-- input.lean --
+def interact : IO Unit := do
+match ← getUserInfo with
+| none =>
+IO.eprintln "Missing info"
+| some ⟨name, beetle⟩ =>
+IO.println s!"Hello {name}, whose favorite beetle is {beetle}."
+-- output.lean --
+def interact : IO Unit := do
+  match ← getUserInfo with
+  | none =>
+    IO.eprintln "Missing info"
+  | some ⟨name, beetle⟩ =>
+    IO.println s!"Hello {name}, whose favorite beetle is {beetle}."
+`,
+	},
+	{
 		name: "collapse multiple spaces before ':' in binder",
 		archive: `
 -- input.lean --
@@ -785,6 +804,56 @@ theorem foo (x : Option (Sum Nat Bool)) : Nat :=
 `,
 	},
 	{
+		name: "nested match three levels (correct indent 2/4/6)",
+		archive: `
+-- input.lean --
+def bar (a : Nat) (b : Nat) (c : Nat) : Nat :=
+  match a with
+  | 0 =>
+    match b with
+    | 0 =>
+      match c with
+      | 0 => 0
+      | _ => 1
+    | _ => 2
+  | _ => 3
+-- output.lean --
+def bar (a : Nat) (b : Nat) (c : Nat) : Nat :=
+  match a with
+  | 0 =>
+    match b with
+    | 0 =>
+      match c with
+      | 0 => 0
+      | _ => 1
+    | _ => 2
+  | _ => 3
+`,
+	},
+	{
+		name: "nested do and match (do-notation spec)",
+		archive: `
+-- input.lean --
+def run (x : Option Nat) : IO Unit := do
+match x with
+| some n =>
+  do
+  let msg := s!"Got " ++ toString n
+  IO.println msg
+| none =>
+  IO.println "none"
+-- output.lean --
+def run (x : Option Nat) : IO Unit := do
+  match x with
+  | some n =>
+    do
+    let msg := s!"Got " ++ toString n
+    IO.println msg
+  | none =>
+    IO.println "none"
+`,
+	},
+	{
 		name: "unicode identifiers",
 		archive: `
 -- input.lean --
@@ -900,6 +969,59 @@ def f := g <| x
 def r := [1:10]
 -- output.lean --
 def r := [1:10]
+`,
+	},
+	// Edge cases vs Lean 4 reference (see README "Known limitations").
+	{
+		name: "declaration modifier after indented body (private def not toplevel)",
+		archive: `
+-- input.lean --
+def x :=
+  1
+private def y := 2
+-- output.lean --
+def x :=
+  1
+  private def y := 2
+`,
+	},
+	{
+		name: "for x in e do adds indent for body (do not start new block per spec)",
+		archive: `
+-- input.lean --
+def f : Option Nat := do
+for x in [1] do
+return x
+-- output.lean --
+def f : Option Nat := do
+  for x in [1] do
+    return x
+`,
+	},
+	{
+		name: "termination_by after def body (no special handling)",
+		archive: `
+-- input.lean --
+def foo (n : Nat) : Nat := n + 1
+termination_by n
+-- output.lean --
+def foo (n : Nat) : Nat := n + 1
+termination_by n
+`,
+	},
+	{
+		name: "let with fallback clause (| treated like match arm)",
+		archive: `
+-- input.lean --
+def f : Option Nat := do
+let some x ← pure (some 1)
+| none => pure 0
+pure x
+-- output.lean --
+def f : Option Nat := do
+  let some x ← pure (some 1)
+  | none => pure 0
+  pure x
 `,
 	},
 }

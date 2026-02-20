@@ -54,6 +54,9 @@ var keywordFlags = map[string]uint{
 	"axiom":     flagToplevel,
 	"constant":  flagToplevel,
 	"opaque":    flagToplevel,
+	"namespace": flagToplevel,
+	"section":   flagToplevel,
+	"end":       flagToplevel,
 	"where":     flagToplevel | flagIndentAfter,
 	"by":        flagIndentAfter,
 	"do":        flagIndentAfter,
@@ -316,6 +319,7 @@ type Formatter struct {
 	opts             FormatOptions
 	indent           int
 	pendingIndent    int
+	matchArmStack    []int // stack of arm indents for nested match (per do-notation spec)
 	blankCount       int
 	prevLineWasBlank bool
 	out              strings.Builder
@@ -418,8 +422,19 @@ func (f *Formatter) applyIndent(info *lineInfo) {
 			f.indent = 0
 		}
 	}
-	if f.indent > f.opts.IndentSize {
-		f.indent = f.opts.IndentSize
+	if info.first.Kind == tokOperator && info.first.Text == "|" {
+		for len(f.matchArmStack) > 0 && info.inputIndent >= 0 && f.matchArmStack[len(f.matchArmStack)-1] > info.inputIndent {
+			f.matchArmStack = f.matchArmStack[:len(f.matchArmStack)-1]
+		}
+		if len(f.matchArmStack) > 0 {
+			f.indent = f.matchArmStack[len(f.matchArmStack)-1]
+		} else if f.indent > 2*f.opts.IndentSize {
+			f.indent -= f.opts.IndentSize
+		}
+	} else {
+		for len(f.matchArmStack) > 0 && f.matchArmStack[len(f.matchArmStack)-1] > f.indent {
+			f.matchArmStack = f.matchArmStack[:len(f.matchArmStack)-1]
+		}
 	}
 }
 
@@ -441,8 +456,17 @@ func (f *Formatter) emitLine(info *lineInfo) {
 }
 
 func (f *Formatter) setNext(info *lineInfo) {
-	if info.last.Kind == tokKeyword && (keywordFlags[info.last.Text]&flagIndentAfter) != 0 && !matchWithLine(info.first, info.last) {
-		f.pendingIndent = f.opts.IndentSize
+	if matchWithLine(info.first, info.last) {
+		f.matchArmStack = append(f.matchArmStack, f.indent)
+	}
+	if info.last.Kind == tokKeyword && (keywordFlags[info.last.Text]&flagIndentAfter) != 0 {
+		if matchWithLine(info.first, info.last) {
+			// arms at same level as match
+		} else if info.last.Text == "do" && info.first.Kind == tokKeyword && info.first.Text == "do" {
+			// "do" on its own line: do items at same indent (per spec)
+		} else {
+			f.pendingIndent = f.opts.IndentSize
+		}
 	}
 	if info.last.Kind == tokOpen {
 		f.pendingIndent = f.opts.IndentSize
