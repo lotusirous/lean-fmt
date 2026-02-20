@@ -39,6 +39,7 @@ const (
 	flagIndentAfter = 1 << iota // line ending with this adds pending indent
 	flagToplevel                // line starting with this resets indent to 0
 )
+const flagNone = 0 // keyword for lexer only, no formatter behavior
 
 var keywordFlags = map[string]uint{
 	"theorem":   flagToplevel,
@@ -62,8 +63,9 @@ var keywordFlags = map[string]uint{
 	"do":        flagIndentAfter,
 	"match":     flagIndentAfter,
 	"with":      flagIndentAfter,
-	"let":       0,
-	"have":      0,
+	"let":       flagNone,
+	"have":      flagNone,
+	"cases":     flagIndentAfter,
 }
 
 type stateFn func(*Scanner) stateFn
@@ -338,6 +340,11 @@ func matchWithLine(first, last Token) bool {
 		last.Kind == tokKeyword && last.Text == "with"
 }
 
+func casesWithLine(first, last Token) bool {
+	return first.Kind == tokKeyword && first.Text == "cases" &&
+		last.Kind == tokKeyword && last.Text == "with"
+}
+
 type lineInfo struct {
 	first, last Token
 	inputIndent int
@@ -456,11 +463,11 @@ func (f *Formatter) emitLine(info *lineInfo) {
 }
 
 func (f *Formatter) setNext(info *lineInfo) {
-	if matchWithLine(info.first, info.last) {
+	if matchWithLine(info.first, info.last) || casesWithLine(info.first, info.last) {
 		f.matchArmStack = append(f.matchArmStack, f.indent)
 	}
 	if info.last.Kind == tokKeyword && (keywordFlags[info.last.Text]&flagIndentAfter) != 0 {
-		if matchWithLine(info.first, info.last) {
+		if matchWithLine(info.first, info.last) || casesWithLine(info.first, info.last) {
 			// arms at same level as match
 		} else if info.last.Text == "do" && info.first.Kind == tokKeyword && info.first.Text == "do" {
 			// "do" on its own line: do items at same indent (per spec)

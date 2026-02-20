@@ -771,6 +771,108 @@ def foo := List.map
 `,
 	},
 	{
+		name: "tactics for case h with",
+		archive: `
+-- input.lean --
+example (p q : Prop) : p ∧ q → q ∧ p := by
+  intro h
+  cases h with
+  | intro hp hq => constructor; exact hq; exact hp
+-- output.lean --
+example (p q : Prop) : p ∧ q → q ∧ p := by
+  intro h
+  cases h with
+  | intro hp hq => constructor; exact hq; exact hp
+`,
+	},
+	{
+		name: "rewriting tactics block",
+		archive: `
+-- input.lean --
+variable (k : Nat) (f : Nat → Nat)
+
+example (h₁ : f 0 = 0) (h₂ : k = 0) : f k = 0 := by
+  rw [h₂] -- replace k with 0
+  rw [h₁] -- replace f 0 with 0
+-- output.lean --
+variable (k : Nat) (f : Nat → Nat)
+
+example (h₁ : f 0 = 0) (h₂ : k = 0) : f k = 0 := by
+  rw [h₂] -- replace k with 0
+  rw [h₁] -- replace f 0 with 0
+`,
+	},
+	{
+		name: "should indent cases tactics correctly",
+		archive: `
+-- input.lean --
+example (p q r : Prop) : p ∧ (q ∨ r) → (p ∧ q) ∨ (p ∧ r) := by
+  intro ⟨hp, hqr⟩
+  show (p ∧ q) ∨ (p ∧ r)
+  cases hqr with
+  | inl hq =>
+    have hpq : p ∧ q := And.intro hp hq
+    apply Or.inl
+    exact hpq
+  | inr hr =>
+    have hpr : p ∧ r := And.intro hp hr
+    apply Or.inr
+    exact hpr
+-- output.lean --
+example (p q r : Prop) : p ∧ (q ∨ r) → (p ∧ q) ∨ (p ∧ r) := by
+  intro ⟨hp, hqr⟩
+  show (p ∧ q) ∨ (p ∧ r)
+  cases hqr with
+  | inl hq =>
+    have hpq : p ∧ q := And.intro hp hq
+    apply Or.inl
+    exact hpq
+  | inr hr =>
+    have hpr : p ∧ r := And.intro hp hr
+    apply Or.inr
+    exact hpr
+`,
+	},
+	{
+		name: "should indent apply tactics correctly",
+		archive: `
+-- input.lean --
+example (p q r : Prop) : p ∧ (q ∨ r) ↔ (p ∧ q) ∨ (p ∧ r) := by
+  apply Iff.intro
+  { intro h;
+    cases h.right;
+    { show (p ∧ q) ∨ (p ∧ r);
+      exact Or.inl ⟨h.left, ‹q›⟩ }
+    { show (p ∧ q) ∨ (p ∧ r);
+      exact Or.inr ⟨h.left, ‹r›⟩ } }
+  { intro h;
+    cases h;
+    { show p ∧ (q ∨ r);
+      rename_i hpq;
+      exact ⟨hpq.left, Or.inl hpq.right⟩ }
+    { show p ∧ (q ∨ r);
+      rename_i hpr;
+      exact ⟨hpr.left, Or.inr hpr.right⟩ } }
+-- output.lean --
+example (p q r : Prop) : p ∧ (q ∨ r) ↔ (p ∧ q) ∨ (p ∧ r) := by
+  apply Iff.intro
+  { intro h;
+    cases h.right;
+    { show (p ∧ q) ∨ (p ∧ r);
+      exact Or.inl ⟨h.left, ‹q›⟩ }
+    { show (p ∧ q) ∨ (p ∧ r);
+      exact Or.inr ⟨h.left, ‹r›⟩ } }
+  { intro h;
+    cases h;
+    { show p ∧ (q ∨ r);
+      rename_i hpq;
+      exact ⟨hpq.left, Or.inl hpq.right⟩ }
+    { show p ∧ (q ∨ r);
+      rename_i hpr;
+      exact ⟨hpr.left, Or.inr hpr.right⟩ } }
+`,
+	},
+	{
 		name: "nested match with keyword",
 		archive: `
 -- input.lean --
