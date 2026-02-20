@@ -180,6 +180,21 @@ def x : Nat :=
 `,
 	},
 	{
+		name: "indent should work in the block",
+		archive: `
+-- input.lean --
+def spaceBetween (before : String) (after : String) : String :=
+  String.append before (String.append " " after)
+
+#check (spaceBetween)
+-- output.lean --
+def spaceBetween (before : String) (after : String) : String :=
+  String.append before (String.append " " after)
+
+#check (spaceBetween)
+`,
+	},
+	{
 		name: "empty input unchanged",
 		archive: `
 -- input.lean --

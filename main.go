@@ -392,6 +392,10 @@ func (f *Formatter) FormatLine(tokens []Token) {
 			f.indent = 0
 		}
 	}
+	// Lean commands (#check, #eval, etc.) are top-level.
+	if first.Kind == tokIdent && len(first.Text) > 0 && first.Text[0] == '#' {
+		f.indent = 0
+	}
 	// Line starting with ":=" (e.g. ":= by") starts definition body at column 0.
 	if first.Kind == tokOperator && first.Text == ":=" {
 		f.indent = 0
